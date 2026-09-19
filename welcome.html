@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to PowerGrid EV - Choose Your Access</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5f 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Animated background particles */
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        /* Main Container */
+        .welcome-container {
+            max-width: 1200px;
+            width: 90%;
+            text-align: center;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        /* Header */
+        .welcome-header {
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 1rem;
+        }
+
+        .logo::before {
+            content: "⚡";
+            margin-right: 1rem;
+            font-size: 4rem;
+            filter: drop-shadow(0 0 20px #00d4ff);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .welcome-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d4ff, #66e0ff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Access Options */
+        .access-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .access-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .access-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .access-card:hover::before {
+            opacity: 1;
+        }
+
+        .access-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 25px 50px rgba(0, 212, 255, 0.2);
+        }
+
+        .guest-card {
+            border-color: rgba(52, 199, 89, 0.3);
+        }
+
+        .guest-card:hover {
+            border-color: rgba(52, 199, 89, 0.6);
+            box-shadow: 0 25px 50px rgba(52, 199, 89, 0.2);
+        }
+
+        .guest-card::before {
+            background: radial-gradient(circle, rgba(52, 199, 89, 0.1) 0%, transparent 70%);
+        }
+
+        .access-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .guest-icon {
+            background: linear-gradient(135deg, #34c759, #28a745);
+        }
+
+        .login-icon {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+        }
+
+        .access-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .guest-title {
+            color: #34c759;
+        }
+
+        .login-title {
+            color: #00d4ff;
+        }
+
+        .access-description {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .access-btn {
+            width: 100%;
+            padding: 1.2rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .guest-btn {
+            background: linear-gradient(135deg, #34c759, #28a745);
+            color: white;
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
+        }
+
+        .guest-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 199, 89, 0.4);
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        }
+
+        .access-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .access-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Features List */
+        .features-section {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            margin-top: 3rem;
+        }
+
+        .features-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #00d4ff;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+
+        .feature-item::before {
+            content: "✓";
+            color: #34c759;
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 1.2rem;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .welcome-title {
+                font-size: 2.5rem;
+            }
+            
+            .access-options {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            
+            .access-card {
+                padding: 2rem 1.5rem;
+            }
+            
+            .welcome-container {
+                width: 95%;
+            }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="welcome-container">
+        <!-- Header -->
+        <header class="welcome-header">
+            <div class="logo">PowerGrid EV</div>
+            <h1 class="welcome-title">Welcome to the Future</h1>
+            <p class="welcome-subtitle">Choose your access level to explore our premium EV charging network and route planning services</p>
+        </header>
+
+        <!-- Access Options -->
+        <div class="access-options">
+            <!-- Guest Access Card -->
+            <div class="access-card guest-card" onclick="navigateToGuest()">
+                <div class="access-icon guest-icon">🚀</div>
+                <h2 class="access-title guest-title">Quick Guest Access</h2>
+                <p class="access-description">
+                    Perfect for users in a hurry! Get instant access to find charging stations, plan routes, and check traffic without any registration. All features available immediately.
+                </p>
+                <button class="access-btn guest-btn" id="guestAccessBtn">
+                    <span class="loading-spinner" id="guestSpinner"></span>
+                    <span id="guestText">Start as Guest</span>
+                </button>
+            </div>
+
+            <!-- Main Login Card -->
+            <div class="access-card login-card" onclick="navigateToLogin()">
+                <div class="access-icon login-icon">🔐</div>
+                <h2 class="access-title login-title">Main Login</h2>
+                <p class="access-description">
+                    Full access with personalized features, saved preferences, station management, and advanced analytics. Perfect for regular users and administrators.
+                </p>
+                <button class="access-btn login-btn" id="mainLoginBtn">
+                    <span class="loading-spinner" id="loginSpinner"></span>
+                    <span id="loginText">Sign In</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <section class="features-section">
+            <h3 class="features-title">What You Can Do</h3>
+            <div class="features-grid">
+                <div class="feature-item">Find nearby charging stations</div>
+                <div class="feature-item">Plan optimized EV routes</div>
+                <div class="feature-item">Check real-time traffic</div>
+                <div class="feature-item">View station availability</div>
+                <div class="feature-item">Get charging time estimates</div>
+                <div class="feature-item">Access premium features</div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 PowerGrid EV. Empowering your electric journey.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Create animated background particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 60;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Navigation functions with loading states
+        function navigateToGuest() {
+            console.log('navigateToGuest function called!');
+            const spinner = document.getElementById('guestSpinner');
+            const text = document.getElementById('guestText');
+            const btn = document.getElementById('guestAccessBtn');
+            
+            spinner.style.display = 'inline-block';
+            text.textContent = 'Loading...';
+            btn.disabled = true;
+            
+            // Force navigation to guest dashboard (cache-busted)
+            setTimeout(() => {
+                console.log('Navigating to guest dashboard...');
+                window.location.href = 'guest-dashboard.html?v=' + Date.now();
+            }, 800);
+        }
+
+        function navigateToLogin() {
+            const spinner = document.getElementById('loginSpinner');
+            const text = document.getElementById('loginText');
+            const btn = document.getElementById('mainLoginBtn');
+            
+            spinner.style.display = 'inline-block';
+            text.textContent = 'Loading...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 800);
+        }
+
+        // Initialize particles on page load
+        window.addEventListener('load', () => {
+            createParticles();
+        });
+
+        // Add hover effects to cards
+        document.querySelectorAll('.access-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-15px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '1') {
+                navigateToGuest();
+            } else if (e.key === '2') {
+                navigateToLogin();
+            }
+        });
+    </script>
+</body>
+</html>

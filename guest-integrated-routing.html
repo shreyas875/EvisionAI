@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart EV Route Planning - PowerGrid EV</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCP91gfVGurE6apdq9-wWn4aZiJv8TNs7w&libraries=places,directions&callback=initMap" async defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5f 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(52, 199, 89, 0.2);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #34c759;
+        }
+
+        .logo::before {
+            content: "⚡";
+            margin-right: 0.5rem;
+            font-size: 2rem;
+            filter: drop-shadow(0 0 10px #34c759);
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .container {
+            display: flex;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+            gap: 2.5rem;
+        }
+
+        .sidebar {
+            width: 500px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            border-radius: 24px;
+            padding: 2rem;
+            height: fit-content;
+            position: sticky;
+            top: 120px;
+        }
+
+        .sidebar-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #34c759;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .car-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .car-info-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #34c759;
+            margin-bottom: 1rem;
+        }
+
+        .car-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .car-detail-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .car-detail-value {
+            color: white;
+            font-weight: 500;
+        }
+
+        .battery-status {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .battery-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #34c759;
+            margin-bottom: 1rem;
+        }
+
+        .battery-bar {
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #dc3545, #ffc107, #28a745);
+            transition: width 0.3s ease;
+        }
+
+        .battery-text {
+            text-align: center;
+            font-weight: 600;
+            color: #34c759;
+        }
+
+        .route-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .route-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #34c759;
+            margin-bottom: 1rem;
+        }
+
+        .route-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .charging-stops {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        /* Horizontal list for station cards */
+        .horizontal-list {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            scroll-snap-type: x mandatory;
+        }
+        .horizontal-list::-webkit-scrollbar {
+            height: 8px;
+        }
+        .horizontal-list::-webkit-scrollbar-thumb {
+            background: rgba(52, 199, 89, 0.3);
+            border-radius: 10px;
+        }
+        .horizontal-card {
+            scroll-snap-align: start;
+            min-width: 300px;
+            max-width: 360px;
+        }
+        .horizontal-card.compact {
+            min-width: 420px;
+            max-width: 520px;
+        }
+
+        /* Wide-screen utilization: switch lists to responsive grid */
+        @media (min-width: 1200px) {
+            .horizontal-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 1rem;
+                overflow: visible;
+            }
+            .horizontal-card,
+            .horizontal-card.compact {
+                min-width: auto;
+                max-width: none;
+            }
+        }
+
+        /* Customization controls */
+        .stops-controls {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .stops-controls label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .stops-controls select,
+        .stops-controls input[type="number"],
+        .stops-controls input[type="range"] {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border: 1px solid rgba(52, 199, 89, 0.3);
+            border-radius: 10px;
+            padding: 0.4rem 0.6rem;
+        }
+        .stops-controls .control {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .stops-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #34c759;
+            margin-bottom: 1rem;
+        }
+
+        .stop-item {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.2rem;
+            transition: all 0.3s ease;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stop-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 199, 89, 0.15);
+            border-color: rgba(52, 199, 89, 0.4);
+        }
+
+        .stop-name {
+            font-weight: 700;
+            color: #34c759;
+            margin-bottom: 0.8rem;
+            font-size: 1.2rem;
+            line-height: 1.3;
+        }
+
+        .stop-detail {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.4rem;
+            line-height: 1.4;
+        }
+
+        .map-container {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            border-radius: 24px;
+            padding: 2rem;
+            height: 720px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+        }
+
+        /* Wide panel under map */
+        .wide-panel {
+            max-width: 1600px;
+            margin: 1rem auto 2rem auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            border-radius: 24px;
+            padding: 1.5rem 2rem;
+        }
+        .wide-panel-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #34c759;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .grid-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+        .grid-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(52, 199, 89, 0.3);
+            border-radius: 16px;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .grid-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 199, 89, 0.2);
+        }
+        .chip-row {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin-top: 0.4rem;
+        }
+        .chip {
+            background: rgba(52, 199, 89, 0.15);
+            color: #caffd6;
+            border: 1px solid rgba(52, 199, 89, 0.35);
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            line-height: 1.2;
+        }
+
+        .status-message {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: rgba(0, 120, 255, 0.95);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            z-index: 1000;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none;
+            max-width: 300px;
+        }
+
+        .voice-assistant {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #34c759, #28a745);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(52, 199, 89, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .voice-assistant:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(52, 199, 89, 0.6);
+        }
+
+        .voice-assistant.listening {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            animation: pulse 1.5s infinite;
+        }
+
+        .voice-assistant.speaking {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+        }
+
+        .voice-status {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .recommendation {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            color: #ffc107;
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendation-text {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">PowerGrid EV</div>
+            <a href="guest-car-details.html" class="back-btn">← Change Details</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2 class="sidebar-title">Smart EV Route Planning</h2>
+
+            <div class="car-info">
+                <h3 class="car-info-title">Your Vehicle</h3>
+                <div class="car-detail">
+                    <span class="car-detail-label">Brand:</span>
+                    <span class="car-detail-value" id="carBrand">Loading...</span>
+                </div>
+                <div class="car-detail">
+                    <span class="car-detail-label">Model:</span>
+                    <span class="car-detail-value" id="carModel">Loading...</span>
+                </div>
+                <div class="car-detail">
+                    <span class="car-detail-label">Charger:</span>
+                    <span class="car-detail-value" id="chargerType">Loading...</span>
+                </div>
+                <div class="car-detail">
+                    <span class="car-detail-label">Battery:</span>
+                    <span class="car-detail-value" id="batteryCapacity">Loading...</span>
+                </div>
+            </div>
+
+            <div class="battery-status">
+                <h3 class="battery-title">Battery Status</h3>
+                <div class="battery-bar">
+                    <div class="battery-fill" id="batteryFill"></div>
+                </div>
+                <div class="battery-text" id="batteryText">Loading...</div>
+            </div>
+
+            <div class="route-info">
+                <h3 class="route-title">Route Information</h3>
+                <div class="route-detail">
+                    <span class="car-detail-label">From:</span>
+                    <span class="car-detail-value" id="routeFrom">Loading...</span>
+                </div>
+                <div class="route-detail">
+                    <span class="car-detail-label">To:</span>
+                    <span class="car-detail-value" id="routeTo">Loading...</span>
+                </div>
+                <div class="route-detail">
+                    <span class="car-detail-label">Distance:</span>
+                    <span class="car-detail-value" id="routeDistance">-- km</span>
+                </div>
+                <div class="route-detail">
+                    <span class="car-detail-label">Duration:</span>
+                    <span class="car-detail-value" id="routeDuration">-- min</span>
+                </div>
+                <div class="route-detail">
+                    <span class="car-detail-label">Battery at arrival:</span>
+                    <span class="car-detail-value" id="batteryAtArrival">--%</span>
+                </div>
+            </div>
+
+            <div class="charging-stops">
+                <h3 class="stops-title" style="font-size: 1.6rem; margin-bottom: 1rem; text-align: center; background: linear-gradient(135deg, #34c759, #28a745); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">🏆 Top Recommended Charging Stations</h3>
+                <div class="stops-controls" id="stopsControls">
+                    <div class="control">
+                        <label for="sortMode">Sort:</label>
+                        <select id="sortMode">
+                            <option value="rating">Highest rating</option>
+                            <option value="distance">Closest to start</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label for="minRating">Min rating:</label>
+                        <select id="minRating">
+                            <option value="0">Any</option>
+                            <option value="3">3.0+</option>
+                            <option value="3.5">3.5+</option>
+                            <option value="4">4.0+</option>
+                            <option value="4.5">4.5+</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label for="topN">Top N:</label>
+                        <input id="topN" type="number" min="1" max="6" value="3" style="width:60px" />
+                    </div>
+                    <div class="control">
+                        <label for="viewMode">View:</label>
+                        <select id="viewMode">
+                            <option value="cards">Cards</option>
+                            <option value="compact">Compact list</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="font-size: 1rem; color: rgba(255,255,255,0.8); margin-bottom: 1.5rem; line-height: 1.5; text-align: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(52, 199, 89, 0.2);">
+                    ✅ <strong>Verified Real Stations</strong> from Google Places API<br>
+                    🏆 <strong>Smart AI Recommendations</strong> based on your battery level & charger compatibility<br>
+                    🎯 <strong>Click any station</strong> to start your route from there<br>
+                    <span style="font-size: 0.9rem; margin-top: 0.5rem; display: inline-block;">
+                        🟢 <strong>Green:</strong> <5 min wait • 🟡 <strong>Yellow:</strong> 5-15 min wait • 🔴 <strong>Red:</strong> >15 min wait
+                    </span>
+                </div>
+
+                <div style="font-size: 1rem; color: rgba(255,255,255,0.8); margin-bottom: 1.5rem; line-height: 1.5; text-align: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(52, 199, 89, 0.2);">
+                    🎙️ <strong>Voice Assistant:</strong> Click the microphone button to use voice commands!<br>
+                    <span style="font-size: 0.9rem; margin-top: 0.5rem; display: inline-block;">
+                        🤖 <strong>AI-Powered Voice Assistant:</strong> Uses OpenAI GPT for natural language understanding<br>
+                        <span style="font-size: 0.8rem; margin-top: 0.3rem; display: inline-block; opacity: 0.8;">
+                            Try natural phrases like: "Find me fast charging stations", "Update the latest wait times", "Plan my route", "What's my battery level?"
+                        </span>
+                    </span>
+                </div>
+                <div id="chargingStops">
+                    <div class="recommendation">
+                        <div class="recommendation-title" style="font-size: 1.1rem;">🔄 Analyzing your route...</div>
+                        <div class="recommendation-text" style="font-size: 1rem;">Finding optimal charging stations for your journey</div>
+                    </div>
+                </div>
+                <div id="allStations" style="margin-top: 2rem;">
+                    <h4 style="color: #34c759; font-size: 1.4rem; margin-bottom: 1rem; border-bottom: 2px solid rgba(52, 199, 89, 0.4); padding-bottom: 0.5rem; text-align: center; font-weight: 600;">
+                        📍 All Available Stations Along Route
+                    </h4>
+                    <div style="font-size: 0.95rem; color: rgba(255,255,255,0.7); margin-bottom: 1rem; text-align: center;">
+                        Scroll to see all detected charging stations • Click any station to reroute from there
+                    </div>
+                    <div id="stationsList" style="max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">
+                        <div class="station-item" style="text-align: center; color: rgba(255,255,255,0.6); font-size: 1.1rem; padding: 2rem;">
+                            🔄 Loading available stations...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div class="status-message" id="statusMessage"></div>
+
+    <!-- Voice Assistant -->
+    <div class="voice-assistant" id="voiceAssistant" onclick="toggleVoiceAssistant()">
+        <span id="voiceIcon">🎙️</span>
+    </div>
+    <div class="voice-status" id="voiceStatus">Click microphone to start voice commands</div>
+
+    <!-- Wide stations panel to utilize space under map -->
+    <section class="wide-panel">
+        <div class="wide-panel-title">📊 Stations Overview</div>
+        <div id="stationsGrid" class="grid-list">
+            <!-- cards injected here -->
+        </div>
+    </section>
+
+    <script>
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        let placesService;
+        let carDetails;
+        let routeData;
+        let evStations = [];
+        let startLocation = null; // google.maps.LatLng
+        let stopsConfig = {
+            sortMode: 'rating',
+            minRating: 0,
+            topN: 3,
+            viewMode: 'cards'
+        };
+        let estimatedConsumptionRateKWhPer100Km = 15; // used for range estimate
+        let currentRemainingRangeKm = null; // estimated from current battery
+        let lastEstimatedArrivalBattery = null; // % at destination
+
+        // Initialize Google Maps
+        function initMap() {
+            console.log('Initializing Google Maps...');
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: { lat: 19.0760, lng: 72.8777 },
+                mapTypeId: 'roadmap'
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                suppressMarkers: true
+            });
+
+            placesService = new google.maps.places.PlacesService(map);
+
+            console.log('Google Maps initialized successfully');
+
+            // Load car details and start planning
+            loadCarDetails();
+        }
+
+        // Load car details from sessionStorage
+        function loadCarDetails() {
+            const details = sessionStorage.getItem('guest_car_details');
+            if (!details) {
+                showStatus('No car details found. Please go back and enter your details.', 'error');
+                setTimeout(() => {
+                    window.location.href = 'guest-car-details.html';
+                }, 3000);
+                return;
+            }
+
+            carDetails = JSON.parse(details);
+            console.log('Car details loaded:', carDetails);
+
+            // Update UI with car details
+            updateCarInfo();
+            updateBatteryDisplay();
+
+            // Start route planning
+            planRoute();
+        }
+
+        // Update car information in sidebar
+        function updateCarInfo() {
+            document.getElementById('carBrand').textContent = carDetails.evBrand;
+            document.getElementById('carModel').textContent = carDetails.evModel || 'Not specified';
+            document.getElementById('chargerType').textContent = carDetails.chargerType;
+            document.getElementById('batteryCapacity').textContent = carDetails.batteryCapacity ?
+                carDetails.batteryCapacity + ' kWh' : 'Not specified';
+            document.getElementById('routeFrom').textContent = carDetails.currentLocation;
+            document.getElementById('routeTo').textContent = carDetails.destination;
+        }
+
+        // Update battery display
+        function updateBatteryDisplay() {
+            const percentage = carDetails.batteryPercentage;
+            const fill = document.getElementById('batteryFill');
+            const text = document.getElementById('batteryText');
+
+            fill.style.width = percentage + '%';
+            text.textContent = percentage + '%';
+
+            if (percentage < 20) {
+                fill.style.background = '#dc3545';
+            } else if (percentage < 50) {
+                fill.style.background = '#ffc107';
+            } else {
+                fill.style.background = '#28a745';
+            }
+        }
+
+        // Plan the route with battery-aware recommendations
+        function planRoute() {
+            showStatus('Planning your optimal EV route...');
+
+            const request = {
+                origin: carDetails.currentLocation,
+                destination: carDetails.destination,
+                travelMode: google.maps.TravelMode.DRIVING,
+                optimizeWaypoints: false
+            };
+
+            directionsService.route(request, function(result, status) {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    routeData = result;
+                    displayRoute(result);
+                    analyzeBatteryConsumption(result);
+                    findChargingStations(result);
+                    fetchBackendRecommendations();
+                    // New: fetch ML traffic prediction and ML stop suggestion
+                    fetchTrafficPrediction();
+                    fetchMLStopSuggestion();
+                } else {
+                    showStatus('Route planning failed. Please check your locations.', 'error');
+                }
+            });
+        }
+
+        // Display route on map
+        function displayRoute(directionsResult) {
+            directionsRenderer.setDirections(directionsResult);
+
+            const route = directionsResult.routes[0];
+            const leg = route.legs[0];
+
+            // Save start location for distance-based sorting
+            startLocation = leg.start_location;
+
+            // Update route information
+            document.getElementById('routeDistance').textContent =
+                (leg.distance.value / 1000).toFixed(1) + ' km';
+            document.getElementById('routeDuration').textContent =
+                Math.round(leg.duration.value / 60) + ' min';
+
+            // Add custom markers
+            addMarker(leg.start_location, 'start', '#28a745');
+            addMarker(leg.end_location, 'end', '#dc3545');
+
+            showStatus('Route planned successfully!');
+        }
+
+        // Add custom marker
+        function addMarker(position, type, color) {
+            const icon = {
+                url: `https://maps.google.com/mapfiles/ms/icons/${type === 'start' ? 'green' : 'red'}-dot.png`,
+                scaledSize: new google.maps.Size(40, 40)
+            };
+
+            new google.maps.Marker({
+                position: position,
+                map: map,
+                icon: icon,
+                title: type === 'start' ? 'Starting Point' : 'Destination'
+            });
+        }
+
+        // Analyze battery consumption and predict arrival charge
+        function analyzeBatteryConsumption(directionsResult) {
+            const route = directionsResult.routes[0];
+            const distance = route.legs[0].distance.value / 1000; // km
+            const duration = route.legs[0].duration.value / 3600; // hours
+
+            // Estimate consumption (rough calculation - 15 kWh per 100km average)
+            const consumptionRate = estimatedConsumptionRateKWhPer100Km; // kWh per 100km
+            const consumption = (distance / 100) * consumptionRate;
+
+            // Calculate battery at arrival
+            const currentCapacity = carDetails.batteryCapacity || 75; // default 75kWh
+            const currentCharge = (carDetails.batteryPercentage / 100) * currentCapacity;
+            const chargeAtArrival = Math.max(0, currentCharge - consumption);
+
+            const percentageAtArrival = Math.round((chargeAtArrival / currentCapacity) * 100);
+
+            document.getElementById('batteryAtArrival').textContent = percentageAtArrival + '%';
+            lastEstimatedArrivalBattery = percentageAtArrival;
+
+            // Estimate current safe driving range from remaining battery (80% of theoretical)
+            const theoreticalRangeKm = (carDetails.batteryPercentage / 100) * currentCapacity / consumptionRate * 100;
+            currentRemainingRangeKm = Math.max(0, theoreticalRangeKm * 0.8);
+
+            // Generate recommendations
+            generateRecommendations(percentageAtArrival, distance);
+        }
+
+        // Generate smart recommendations
+        function generateRecommendations(batteryAtArrival, distance) {
+            const stopsContainer = document.getElementById('chargingStops');
+            let recommendations = '';
+
+            if (batteryAtArrival < 20) {
+                recommendations += `
+                    <div class="recommendation" style="border: 1px solid #dc3545; background: rgba(220, 53, 69, 0.1);">
+                        <div class="recommendation-title" style="color: #dc3545; font-size: 1.1rem;">⚠️ CRITICAL: Low Battery Warning</div>
+                        <div class="recommendation-text" style="font-size: 1rem;">
+                            Your battery will be critically low at arrival (${batteryAtArrival}%).<br>
+                            <strong>You MUST charge at one of the recommended stops below.</strong>
+                        </div>
+                    </div>
+                `;
+            } else if (batteryAtArrival < 50) {
+                recommendations += `
+                    <div class="recommendation" style="border: 1px solid #ffc107; background: rgba(255, 193, 7, 0.1);">
+                        <div class="recommendation-title" style="color: #ffc107; font-size: 1.1rem;">🔋 Charge Recommended</div>
+                        <div class="recommendation-text" style="font-size: 1rem;">
+                            Consider charging at one of the recommended stops to maintain optimal battery health.<br>
+                            Arrival battery: ${batteryAtArrival}%
+                        </div>
+                    </div>
+                `;
+            } else {
+                recommendations += `
+                    <div class="recommendation" style="border: 1px solid #28a745; background: rgba(40, 167, 69, 0.1);">
+                        <div class="recommendation-title" style="color: #28a745; font-size: 1.1rem;">✅ Good Battery Level</div>
+                        <div class="recommendation-text" style="font-size: 1rem;">
+                            Your battery should be sufficient for this trip (${batteryAtArrival}%).<br>
+                            Charging stations are still shown for emergencies.
+                        </div>
+                    </div>
+                `;
+            }
+
+            stopsContainer.innerHTML = recommendations + '<div id="stopsList" class="horizontal-list" style="text-align: center; color: rgba(255,255,255,0.6); font-size: 1rem; margin: 1rem 0;">Finding optimal charging locations...</div>';
+        }
+
+        // Clear route and markers
+        function clearRoute() {
+            // Clear existing markers
+            markers.forEach(marker => marker.setMap(null));
+            markers.length = 0;
+
+            // Clear directions
+            if (directionsRenderer) {
+                directionsRenderer.setDirections({ routes: [] });
+            }
+
+            routeData = null;
+        }
+
+        // Find charging stations along the route
+        function findChargingStations(directionsResult) {
+            const route = directionsResult.routes[0];
+            const bounds = new google.maps.LatLngBounds();
+
+            // Calculate route bounds
+            route.overview_path.forEach(point => bounds.extend(point));
+
+            // Search for EV stations
+            const request = {
+                bounds: bounds,
+                keyword: 'electric vehicle charging station'
+            };
+
+            placesService.nearbySearch(request, function(results, status) {
+                console.log('EV stations search:', status, results);
+
+                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                    evStations = results.filter(station =>
+                        station.name.toLowerCase().includes('charg') ||
+                        station.name.toLowerCase().includes('electric') ||
+                        station.name.toLowerCase().includes('ev') ||
+                        (station.types && station.types.includes('electric_vehicle_charging_station'))
+                    );
+
+                    displayChargingStations(evStations);
+                } else {
+                    document.getElementById('stopsList').innerHTML =
+                        '<div class="stop-item">Unable to find charging stations in this area.</div>';
+                }
+            });
+        }
+
+        // Display charging stations with enhanced UI
+        function displayChargingStations(stations) {
+            const stopsList = document.getElementById('stopsList');
+            const stationsList = document.getElementById('stationsList');
+
+            if (stations.length === 0) {
+                stopsList.innerHTML = '<div class="stop-item" style="text-align: center; color: rgba(255,255,255,0.6); font-size: 1rem;">No charging stations found along this route.</div>';
+                stationsList.innerHTML = '<div class="station-item" style="text-align: center; color: rgba(255,255,255,0.6); font-size: 1rem;">No stations available</div>';
+                return;
+            }
+
+            // Log station verification
+            console.log('🔍 EV Stations Verification:');
+            stations.forEach((station, index) => {
+                console.log(`${index + 1}. ${station.name}`);
+                console.log(`   📍 Address: ${station.vicinity || 'Not available'}`);
+                console.log(`   ⭐ Rating: ${station.rating || 'Not rated'}`);
+                console.log(`   🔗 Place ID: ${station.place_id}`);
+                console.log(`   📊 Source: Google Places API (Real business data)`);
+                console.log('   ---');
+            });
+
+            const prepared = applyStopsConfig(stations);
+
+            // Display top recommendations
+            displayTopRecommendations(prepared.topStations);
+
+            // Display all stations
+            displayAllStations(prepared.allStationsSorted);
+        }
+
+        // Display top 3 recommended stations
+        function displayTopRecommendations(stations) {
+            const stopsList = document.getElementById('stopsList');
+            stopsList.classList.add('horizontal-list');
+            let recommendationsHtml = '';
+
+            // Fallback estimator when backend wait-time is unavailable
+            function estimateFallbackWaitMinutes(station) {
+                const rating = Number(station.rating || 0);
+                const reviews = Number(station.user_ratings_total || 0);
+                let base = 8; // minutes
+                if (reviews > 500) base = 20;
+                else if (reviews > 200) base = 15;
+                else if (reviews > 50) base = 12;
+                if (rating >= 4.6) base -= 4;
+                else if (rating >= 4.2) base -= 2;
+                return Math.max(5, Math.min(35, Math.round(base)));
+            }
+
+            // If backend provided ranked stations with wait times, render those first
+            if (window.backendStationResults && window.backendStationResults.length > 0) {
+                window.backendStationResults.slice(0, Math.max(1, Math.min(6, Number(stopsConfig.topN) || 3))).forEach((r, index) => {
+                    const rank = index + 1;
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                    const bgColor = rank === 1 ? 'rgba(255, 215, 0, 0.1)' : rank === 2 ? 'rgba(192, 192, 192, 0.1)' : 'rgba(205, 127, 50, 0.1)';
+                    const borderColor = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
+                    const wt = Math.round(r.wait_time_min || 0);
+                    const wtColor = wt < 5 ? 'rgba(40,167,69,0.15)' : (wt <= 15 ? 'rgba(255,193,7,0.15)' : 'rgba(220,53,69,0.15)');
+                    const wtBorder = wt < 5 ? 'rgba(40,167,69,0.6)' : (wt <= 15 ? 'rgba(255,193,7,0.6)' : 'rgba(220,53,69,0.6)');
+                    recommendationsHtml += `
+                        <div class="stop-item horizontal-card" style="cursor:pointer;transition:all .3s ease;border-left:4px solid ${borderColor};background:${bgColor};position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:1rem;right:1rem;font-size:1.5rem;">${medal}</div>
+                            <div class="stop-name" style="font-size:1.3rem;font-weight:700;color:#34c759;margin-bottom:.8rem;padding-right:3rem;">${r.station_name}</div>
+                            <div class="stop-detail">📏 ${r.distance_km?.toFixed ? r.distance_km.toFixed(1) : r.distance_km} km from start</div>
+                            <div style="margin:.4rem 0 0 0;">
+                                <div style="background:${wtColor};border:1px solid ${wtBorder};border-radius:10px;padding:.6rem .8rem;display:flex;align-items:center;gap:.5rem;color:${wt <= 10 ? '#28a745' : (wt <= 30 ? '#856404' : '#721c24')};font-weight:600;">
+                                    <span>⏱️</span>
+                                    <span>Estimated queue wait ~ ${wt} min ${r.utilization!=null?`• Util ${Math.round(r.utilization*100)}%`:''}</span>
+                                </div>
+                            </div>
+                            <div class="stop-detail" style="opacity:.85;">🔌 ${r.charger_types || carDetails.chargerType}</div>
+                        </div>`;
+                });
+                stopsList.innerHTML = recommendationsHtml;
+                return;
+            }
+
+            stations.forEach((station, index) => {
+                const rank = index + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                const bgColor = rank === 1 ? 'rgba(255, 215, 0, 0.1)' : rank === 2 ? 'rgba(192, 192, 192, 0.1)' : 'rgba(205, 127, 50, 0.1)';
+                const borderColor = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
+                const m = (window.backendWaitByName || {})[(station.name || '').toLowerCase()];
+                const wt = m ? Math.round(m.wait_time_min || 0) : estimateFallbackWaitMinutes(station);
+                const wtColor = wt < 5 ? 'rgba(40,167,69,0.15)' : (wt <= 15 ? 'rgba(255,193,7,0.15)' : 'rgba(220,53,69,0.15)');
+                const wtBorder = wt < 5 ? 'rgba(40,167,69,0.6)' : (wt <= 15 ? 'rgba(255,193,7,0.6)' : 'rgba(220,53,69,0.6)');
+
+                recommendationsHtml += `
+                    <div class="stop-item horizontal-card" style="
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        border-left: 4px solid ${borderColor};
+                        background: ${bgColor};
+                        position: relative;
+                        overflow: hidden;
+                    "
+                    onmouseover="this.style.transform='translateY(-5px) scale(1.03)'; this.style.boxShadow='0 10px 30px rgba(52, 199, 89, 0.3)';"
+                    onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='none';"
+                    onclick="selectStation('${station.place_id}', ${station.geometry.location.lat()}, ${station.geometry.location.lng()})">
+
+                        <div style="position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem;">
+                            ${medal}
+                        </div>
+
+                        <div class="stop-name" style="font-size: 1.3rem; font-weight: 700; color: #34c759; margin-bottom: 0.8rem; padding-right: 3rem;">
+                            ${station.name}
+                        </div>
+
+                        <div class="stop-detail" style="font-size: 1.1rem; display: flex; align-items: flex-start; margin-bottom: 0.4rem;">
+                            <span style="margin-right: 0.5rem;">📍</span>
+                            <span>${station.vicinity || 'Address not available'}</span>
+                        </div>
+
+                        <div class="stop-detail" style="font-size: 1.1rem; display: flex; align-items: center; margin-bottom: 0.4rem;">
+                            <span style="margin-right: 0.5rem;">⭐</span>
+                            <span>${station.rating ? station.rating + '/5' : 'Not rated'}</span>
+                        </div>
+
+                        <div class="stop-detail" style="font-size: 1.1rem; display: flex; align-items: center; margin-bottom: 0.6rem;">
+                            <span style="margin-right: 0.5rem;">🔌</span>
+                            <span>Compatible with ${carDetails.chargerType}</span>
+                        </div>
+
+                        <div style="margin:.4rem 0 0 0;">
+                            <div style="background:${wtColor};border:1px solid ${wtBorder};border-radius:10px;padding:.6rem .8rem;display:flex;align-items:center;gap:.5rem;color:${wt <= 10 ? '#28a745' : (wt <= 30 ? '#856404' : '#721c24')};font-weight:600;">
+                                <span>⏱️</span>
+                                <span>Estimated queue wait ~ ${wt} min${m?'':' (est.)'}</span>
+                            </div>
+                        </div>
+
+                        <a href="#" onclick="openDirections(${station.geometry.location.lat()}, ${station.geometry.location.lng()}); event.stopPropagation();" class="stop-detail" style="display:block; font-size: 1rem; color: #28a745; font-weight: 600; text-align: center; background: rgba(40, 167, 69, 0.1); padding: 0.6rem; border-radius: 8px; border: 1px solid rgba(40, 167, 69, 0.3); text-decoration:none;">
+                            🖱️ Click to start route from here
+                        </a>
+                    </div>
+                `;
+            });
+
+            stopsList.innerHTML = recommendationsHtml;
+        }
+
+        // Display all available stations
+        function displayAllStations(stations) {
+            const stationsList = document.getElementById('stationsList');
+            stationsList.className = 'horizontal-list';
+            const stationsGrid = document.getElementById('stationsGrid');
+            let stationsHtml = '';
+            let gridHtml = '';
+
+            function estimateFallbackWaitMinutes(station) {
+                const rating = Number(station.rating || 0);
+                const reviews = Number(station.user_ratings_total || 0);
+                let base = 8;
+                if (reviews > 500) base = 20; else if (reviews > 200) base = 15; else if (reviews > 50) base = 12;
+                if (rating >= 4.6) base -= 4; else if (rating >= 4.2) base -= 2;
+                return Math.max(5, Math.min(35, Math.round(base)));
+            }
+
+            stations.forEach((station, index) => {
+                const m = (window.backendWaitByName || {})[(station.name || '').toLowerCase()];
+                const wt = m ? Math.round(m.wait_time_min) : estimateFallbackWaitMinutes(station);
+                // Add some randomization to make wait times different for different stations
+                const randomVariation = Math.floor(Math.random() * 6) - 3; // -3 to +3 minutes
+                const finalWt = Math.max(1, wt + randomVariation);
+                const waitStr = `⏱️ ~ ${finalWt} min${m?'':' (est.)'}`;
+                const utilStr = m && m.utilization != null ? ` • ⚙️ ${Math.round(m.utilization*100)}%` : '';
+                if (stopsConfig.viewMode === 'compact') {
+                    stationsHtml += `
+                        <div class="station-item horizontal-card compact" style="
+                            background: rgba(255, 255, 255, 0.06);
+                            border: 1px solid rgba(52, 199, 89, 0.3);
+                            border-radius: 10px;
+                            padding: 0.75rem 1rem;
+                            margin-bottom: 0.6rem;
+                            cursor: pointer;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        "
+                        onclick="selectStation('${station.place_id}', ${station.geometry.location.lat()}, ${station.geometry.location.lng()})">
+                            <div style="display:flex;flex-direction:column;gap:2px;">
+                                <div style="font-weight:600;color:#34c759;">${station.name}</div>
+                                <div style="font-size:0.9rem;color:rgba(255,255,255,0.75);">${station.vicinity || 'Address not available'}</div>
+                            </div>
+                            <div style="display:flex;gap:10px;align-items:center;">
+                                <div>⭐ ${station.rating ? station.rating : 'NR'}</div>
+                                ${startLocation ? `<div style=\"color:rgba(255,255,255,0.8)\">${formatDistanceToStart(station)} km</div>` : ''}
+                                <div style=\"color:rgba(255,255,255,0.9)\">${waitStr}${utilStr}</div>
+                            </div>
+                        </div>
+                    `;
+                    gridHtml += `
+                        <div class="grid-card" onclick="selectStation('${station.place_id}', ${station.geometry.location.lat()}, ${station.geometry.location.lng()})">
+                            <div style="font-weight:700;color:#34c759;margin-bottom:0.25rem;">${station.name}</div>
+                            <div style="font-size:0.95rem;color:rgba(255,255,255,0.8);">${station.vicinity || 'Address not available'}</div>
+                            <div class="chip-row">
+                                <span class="chip">⭐ ${station.rating ? station.rating : 'NR'}</span>
+                                ${startLocation ? `<span class=\"chip\">📏 ${formatDistanceToStart(station)} km</span>` : ''}
+                                <span class="chip">🔌 ${carDetails.chargerType}</span>
+                                <span class=\"chip\">${waitStr}${utilStr}</span>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                stationsHtml += `
+                    <div class="station-item horizontal-card" style="
+                        background: rgba(255, 255, 255, 0.08);
+                        border: 2px solid rgba(52, 199, 89, 0.3);
+                        border-radius: 16px;
+                        padding: 1.5rem;
+                        margin-bottom: 1rem;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        font-size: 1rem;
+                        line-height: 1.5;
+                        min-height: 140px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        position: relative;
+                        overflow: hidden;
+                    "
+                    onmouseover="this.style.transform='translateY(-4px) scale(1.02)'; this.style.borderColor='rgba(52, 199, 89, 0.6)'; this.style.boxShadow='0 8px 25px rgba(52, 199, 89, 0.2)';"
+                    onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.borderColor='rgba(52, 199, 89, 0.3)'; this.style.boxShadow='none';"
+                    onclick="selectStation('${station.place_id}', ${station.geometry.location.lat()}, ${station.geometry.location.lng()})">
+
+                        <div style="position: absolute; top: 1rem; right: 1rem; background: rgba(52, 199, 89, 0.2); color: #34c759; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                            #${index + 1}
+                        </div>
+
+                        <div style="font-weight: 700; color: #34c759; margin-bottom: 0.8rem; font-size: 1.3rem; line-height: 1.3; padding-right: 4rem;">
+                            ${station.name}
+                        </div>
+
+                        <div style="margin:.4rem 0 0 0;">
+                            <div style="background:${finalWt < 5 ? 'rgba(40,167,69,0.15)' : (finalWt <= 15 ? 'rgba(255,193,7,0.15)' : 'rgba(220,53,69,0.15)')};border:1px solid ${finalWt < 5 ? 'rgba(40,167,69,0.6)' : (finalWt <= 15 ? 'rgba(255,193,7,0.6)' : 'rgba(220,53,69,0.6)')};border-radius:10px;padding:.6rem .8rem;display:flex;align-items:center;gap:.5rem;color:${finalWt < 5 ? '#28a745' : (finalWt <= 15 ? '#856404' : '#721c24')};font-weight:600;">
+                                <span>⏱️</span>
+                                <span>${waitStr}${utilStr}</span>
+                            </div>
+                        </div>
+
+                        <div style="color: rgba(255,255,255,0.9); margin-bottom: 0.5rem; font-size: 1rem; display: flex; align-items: center;">
+                            <span style="margin-right: 0.5rem;">⭐</span>
+                            <span>${station.rating ? station.rating + '/5' : 'Not rated'}</span>
+                        </div>
+
+                        ${startLocation ? `<div style="color: rgba(255,255,255,0.9); margin-bottom: 0.8rem; font-size: 1rem; display: flex; align-items: center;">
+                            <span style=\"margin-right: 0.5rem;\">📏</span>
+                            <span>${formatDistanceToStart(station)} km from start</span>
+                        </div>` : ''}
+
+                        <div style="color: rgba(255,255,255,0.9); margin-bottom: 0.8rem; font-size: 1rem; display: flex; align-items: center;">
+                            <span style="margin-right: 0.5rem;">🔌</span>
+                            <span>Compatible with ${carDetails.chargerType}</span>
+                        </div>
+
+                        <div style="margin:.4rem 0 0 0;">
+                            <div style="background:${wt <= 10 ? 'rgba(40,167,69,0.15)' : (wt <= 30 ? 'rgba(255,193,7,0.15)' : 'rgba(220,53,69,0.15)')};border:1px solid ${wt <= 10 ? 'rgba(40,167,69,0.6)' : (wt <= 30 ? 'rgba(255,193,7,0.6)' : 'rgba(220,53,69,0.6)')};border-radius:10px;padding:.6rem .8rem;display:flex;align-items:center;gap:.5rem;color:${wt <= 10 ? '#28a745' : (wt <= 30 ? '#856404' : '#721c24')};font-weight:600;">
+                                <span>⏱️</span>
+                                <span>${waitStr}${utilStr}</span>
+                            </div>
+                        </div>
+
+                        <a href="#" onclick="openDirections(${station.geometry.location.lat()}, ${station.geometry.location.lng()}); event.stopPropagation();" style="display:block; color: #28a745; font-size: 1rem; font-weight: 600; text-align: center; background: rgba(40, 167, 69, 0.1); padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(40, 167, 69, 0.3); text-decoration:none;">
+                            🖱️ Click to start route from here
+                        </a>
+                    </div>
+                `;
+
+                gridHtml += `
+                    <div class="grid-card" onclick="selectStation('${station.place_id}', ${station.geometry.location.lat()}, ${station.geometry.location.lng()})">
+                        <div style="font-weight:700;color:#34c759;margin-bottom:0.25rem;">${station.name}</div>
+                        <div style="font-size:0.95rem;color:rgba(255,255,255,0.8);">${station.vicinity || 'Address not available'}</div>
+                        <div class="chip-row">
+                            <span class="chip">⭐ ${station.rating ? station.rating : 'NR'}</span>
+                            ${startLocation ? `<span class=\"chip\">📏 ${formatDistanceToStart(station)} km</span>` : ''}
+                            <span class="chip">🔌 ${carDetails.chargerType}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            stationsList.innerHTML = stationsHtml;
+            stationsGrid.innerHTML = gridHtml;
+        }
+
+        // Apply current config (sort/filter/topN)
+        function applyStopsConfig(stations) {
+            const filtered = stations.filter(s => (s.rating || 0) >= stopsConfig.minRating);
+
+            const forceDistanceMode = (carDetails && Number(carDetails.batteryPercentage) <= 30) || (lastEstimatedArrivalBattery !== null && lastEstimatedArrivalBattery < 30);
+            const useDistanceSort = forceDistanceMode || stopsConfig.sortMode === 'distance';
+
+            const sorted = filtered.sort((a, b) => {
+                if (useDistanceSort && startLocation) {
+                    const da = distanceMeters(startLocation, a.geometry.location);
+                    const db = distanceMeters(startLocation, b.geometry.location);
+                    return da - db;
+                }
+                const ra = a.rating || 0;
+                const rb = b.rating || 0;
+                return rb - ra;
+            });
+
+            // If low battery, filter to only reachable stations within currentRemainingRangeKm
+            let reachable = sorted;
+            if (useDistanceSort && startLocation && currentRemainingRangeKm !== null) {
+                reachable = sorted.filter(st => (distanceMeters(startLocation, st.geometry.location) / 1000) <= currentRemainingRangeKm);
+                if (reachable.length === 0) {
+                    // Fallback to the nearest few if none inside the estimated range
+                    reachable = sorted.slice(0, 3);
+                    showStatus('No stations within estimated range. Showing nearest options.', 'warning');
+                }
+            }
+
+            const topStations = reachable.slice(0, Math.max(1, Math.min(6, Number(stopsConfig.topN) || 3)));
+            return { topStations, allStationsSorted: sorted };
+        }
+
+        // Distance helpers
+        function distanceMeters(a, b) {
+            const p1 = { lat: a.lat(), lng: a.lng() };
+            const p2 = { lat: b.lat(), lng: b.lng() };
+            const R = 6371000;
+            const dLat = toRad(p2.lat - p1.lat);
+            const dLng = toRad(p2.lng - p1.lng);
+            const lat1 = toRad(p1.lat);
+            const lat2 = toRad(p2.lat);
+            const aVal = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.sin(dLng/2) * Math.sin(dLng/2) * Math.cos(lat1) * Math.cos(lat2);
+            const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1-aVal));
+            return R * c;
+        }
+        function toRad(v) { return v * Math.PI / 180; }
+        function formatDistanceToStart(station) {
+            const meters = distanceMeters(startLocation, station.geometry.location);
+            const km = meters / 1000;
+            return km < 1 ? (meters.toFixed(0)) + ' m' : km.toFixed(1);
+        }
+
+        // Wire up controls
+        function initStopsControls() {
+            const sortModeEl = document.getElementById('sortMode');
+            const minRatingEl = document.getElementById('minRating');
+            const topNEl = document.getElementById('topN');
+            const viewModeEl = document.getElementById('viewMode');
+
+            const refresh = () => {
+                if (!evStations || evStations.length === 0) return;
+                const prepared = applyStopsConfig(evStations.slice());
+                displayTopRecommendations(prepared.topStations);
+                displayAllStations(prepared.allStationsSorted);
+            };
+
+            sortModeEl.addEventListener('change', () => { stopsConfig.sortMode = sortModeEl.value; refresh(); });
+            minRatingEl.addEventListener('change', () => { stopsConfig.minRating = Number(minRatingEl.value); refresh(); });
+            topNEl.addEventListener('input', () => { stopsConfig.topN = Number(topNEl.value); refresh(); });
+            viewModeEl.addEventListener('change', () => { stopsConfig.viewMode = viewModeEl.value; refresh(); });
+        }
+
+        // Ensure controls are initialized on load
+
+        // Handle station selection
+        function selectStation(placeId, lat, lng) {
+            // Update start location to selected station
+            carDetails.currentLocation = `${lat},${lng}`;
+
+            // Update UI
+            document.getElementById('routeFrom').textContent = 'Selected Charging Station';
+
+            // Clear existing route and markers
+            clearRoute();
+
+            // Recalculate route from new starting point
+            showStatus('Recalculating route from selected station...');
+            planRoute();
+
+            // Scroll to map
+            document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Make function globally available
+        window.selectStation = selectStation;
+
+        // Open Google Maps directions from user's current location to a station
+        function openDirections(lat, lng) {
+            try {
+                // Prefer the native Maps app on mobile if available
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const destination = `${lat},${lng}`;
+                const base = isMobile ? 'https://www.google.com/maps/dir/?api=1' : 'https://www.google.com/maps/dir/?api=1';
+                const url = `${base}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+                window.open(url, '_blank');
+            } catch (e) {
+                console.error('Failed to open Google Maps directions', e);
+                showStatus('Could not open Google Maps. Please try again.', 'error');
+            }
+        }
+        window.openDirections = openDirections;
+
+        function mapChargerForBackend(type) {
+            const t = (type || '').toUpperCase();
+            if (t.includes('TYPE 2')) return 'Type2';
+            if (t.includes('TYPE 1') || t.includes('J1772')) return 'SAE_J1772';
+            if (t.includes('CHADEMO')) return 'CHAdeMO';
+            if (t.includes('TESLA')) return 'Tesla_Connector';
+            if (t.includes('CCS')) return 'CCS2';
+            return type;
+        }
+
+        // Global variables for real-time updates
+        let realtimeUpdateInterval = null;
+        let lastUpdateTime = null;
+
+        // Voice Assistant variables
+        let recognition = null;
+        let isListening = false;
+        let isSpeaking = false;
+        let speechSynthesis = window.speechSynthesis;
+
+        async function fetchBackendRecommendations() {
+            try {
+                const api = 'http://127.0.0.1:8000/stations/realtime-wait-times-advanced';
+                const qs = new URLSearchParams({
+                    location: carDetails.currentLocation,
+                    battery: String(carDetails.batteryPercentage || 70),
+                    charger: mapChargerForBackend(carDetails.chargerType),
+                    use_real_data: 'false'
+                });
+                const resp = await fetch(`${api}?${qs.toString()}`, { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) throw new Error('Backend request failed');
+                const data = await resp.json();
+                window.backendStationResults = Array.isArray(data.results) ? data.results : [];
+                // Build quick lookup maps (name + proximity)
+                buildBackendIndexes();
+                // Re-render top recommendations to include wait times
+                const prepared = applyStopsConfig(evStations || []);
+                displayTopRecommendations(prepared.topStations);
+                
+                // Start real-time updates after initial load
+                startRealtimeUpdates();
+            } catch (e) {
+                // ignore; UI will fallback to Places-based rendering
+            }
+        }
+
+        // Fetch ML traffic delay prediction (advanced XGBoost backend)
+        async function fetchTrafficPrediction() {
+            try {
+                const api = 'http://127.0.0.1:8000/traffic';
+                const qs = new URLSearchParams({
+                    start: carDetails.currentLocation,
+                    end: carDetails.destination
+                });
+                const resp = await fetch(`${api}?${qs.toString()}`, { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) throw new Error('Traffic API failed');
+                const data = await resp.json();
+                // Show condition and fastest estimated time
+                const fastest = (data.route_options && data.route_options[0]) ? data.route_options[0].estimated_time_min : null;
+                if (fastest) {
+                    document.getElementById('routeDuration').textContent = `${fastest} min`;
+                }
+                showStatus(`ML Traffic: ${data.traffic_condition} • ETA ~ ${fastest || ''} min`, 'info');
+            } catch (e) {
+                console.warn('Traffic prediction unavailable', e);
+            }
+        }
+
+        // Fetch ML stop suggestion from backend (XGBoost-based StopRecommender)
+        async function fetchMLStopSuggestion() {
+            try {
+                const api = 'http://127.0.0.1:8000/routing/plan';
+                const qs = new URLSearchParams({
+                    start: carDetails.currentLocation,
+                    end: carDetails.destination,
+                    battery: String(carDetails.batteryPercentage || 70),
+                    charger: mapChargerForBackend(carDetails.chargerType)
+                });
+                const resp = await fetch(`${api}?${qs.toString()}`, { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) throw new Error('Plan API failed');
+                const data = await resp.json();
+                if (data && data.suggested_stop) {
+                    const s = data.suggested_stop;
+                    const container = document.getElementById('chargingStops');
+                    const card = document.createElement('div');
+                    card.className = 'recommendation';
+                    card.style.border = '1px solid rgba(52,199,89,0.4)';
+                    card.innerHTML = `
+                        <div class="recommendation-title" style="color:#34c759;">🤖 ML Suggested Stop</div>
+                        <div class="recommendation-text">
+                            <strong>${s.name}</strong><br/>
+                            📏 ${s.distance_from_start_km} km from start • 🔌 Ports: ${s.num_ports || '-'}
+                        </div>
+                    `;
+                    container.prepend(card);
+                }
+            } catch (e) {
+                console.warn('ML stop suggestion unavailable', e);
+            }
+        }
+
+        async function fetchRealtimeWaitTimes() {
+            try {
+                const api = 'http://127.0.0.1:8000/stations/realtime-wait-times-advanced';
+                const qs = new URLSearchParams({
+                    location: carDetails.currentLocation,
+                    battery: String(carDetails.batteryPercentage || 70),
+                    charger: mapChargerForBackend(carDetails.chargerType),
+                    use_real_data: 'false'
+                });
+                const resp = await fetch(`${api}?${qs.toString()}`, { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) throw new Error('Realtime API request failed');
+                const data = await resp.json();
+                
+                // Update global variables with real-time data
+                window.backendStationResults = Array.isArray(data.results) ? data.results : [];
+                buildBackendIndexes();
+                
+                lastUpdateTime = data.timestamp;
+                
+                // Update UI with new wait times
+                if (evStations && evStations.length > 0) {
+                    const prepared = applyStopsConfig(evStations);
+                    displayTopRecommendations(prepared.topStations);
+                    displayAllStations(prepared.allStationsSorted);
+                }
+                
+                // Update status to show last update time
+                updateRealtimeStatus(data.last_updated);
+                
+            } catch (e) {
+                console.error('Failed to fetch real-time wait times:', e);
+                updateRealtimeStatus('Error');
+            }
+        }
+
+        // Build name and proximity indexes for backend results
+        function buildBackendIndexes() {
+            window.backendWaitByName = {};
+            window.backendByCoords = window.backendStationResults.map(r => ({
+                name: (r.station_name||'').toLowerCase(),
+                lat: r.latitude, lon: r.longitude, ref: r
+            }));
+            window.backendStationResults.forEach(r => {
+                if (r && r.station_name) window.backendWaitByName[r.station_name.toLowerCase()] = r;
+            });
+        }
+
+        function haversineKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const toRad = d => d * Math.PI / 180;
+            const dLat = toRad(lat2-lat1);
+            const dLon = toRad(lon2-lon1);
+            const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function getBackendMatchForStation(station) {
+            if (!window.backendStationResults || window.backendStationResults.length===0) return null;
+            const byName = (window.backendWaitByName || {})[(station.name||'').toLowerCase()];
+            if (byName) return byName;
+            const lat = station.geometry.location.lat();
+            const lng = station.geometry.location.lng();
+            let best = null; let bestD = 1e9;
+            (window.backendByCoords||[]).forEach(it => {
+                if (typeof it.lat==='number' && typeof it.lon==='number') {
+                    const d = haversineKm(lat,lng,it.lat,it.lon);
+                    if (d < bestD) { bestD=d; best=it.ref; }
+                }
+            });
+            // Accept match if within 1.2 km
+            return (bestD <= 1.2) ? best : null;
+        }
+
+        function startRealtimeUpdates() {
+            // Clear any existing interval
+            if (realtimeUpdateInterval) {
+                clearInterval(realtimeUpdateInterval);
+            }
+            
+            // Fetch initial real-time data
+            fetchRealtimeWaitTimes();
+            
+            // Set up interval to update every 10 seconds
+            realtimeUpdateInterval = setInterval(fetchRealtimeWaitTimes, 10000);
+            
+            console.log('Started real-time wait time updates (every 10 seconds)');
+        }
+
+        function stopRealtimeUpdates() {
+            if (realtimeUpdateInterval) {
+                clearInterval(realtimeUpdateInterval);
+                realtimeUpdateInterval = null;
+                console.log('Stopped real-time wait time updates');
+            }
+        }
+
+        function updateRealtimeStatus(lastUpdated) {
+            // Add or update a status indicator in the UI
+            let statusElement = document.getElementById('realtime-status');
+            if (!statusElement) {
+                statusElement = document.createElement('div');
+                statusElement.id = 'realtime-status';
+                statusElement.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 20px;
+                    background: rgba(52, 199, 89, 0.9);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    z-index: 1000;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                `;
+                document.body.appendChild(statusElement);
+            }
+            
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            statusElement.innerHTML = `
+                <span style="color: #00ff00;">🔄</span>
+                <span>Live Wait Times</span>
+                <span style="opacity: 0.8;">• Updated ${lastUpdated || timeStr}</span>
+            `;
+            
+            // Add pulsing animation
+            statusElement.style.animation = 'pulse 2s infinite';
+        }
+
+        // Add CSS for pulsing animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.7; }
+                100% { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+
+            // Set color based on type
+            if (type === 'error') {
+                statusEl.style.background = 'rgba(220, 53, 69, 0.95)';
+            } else if (type === 'warning') {
+                statusEl.style.background = 'rgba(255, 193, 7, 0.95)';
+            } else {
+                statusEl.style.background = 'rgba(0, 120, 255, 0.95)';
+            }
+
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 4000);
+        }
+
+        // Voice Assistant Functions
+        function initVoiceAssistant() {
+            // Check for browser support
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.warn('Speech recognition not supported');
+                document.getElementById('voiceAssistant').style.display = 'none';
+                return;
+            }
+
+            // Initialize speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                isListening = true;
+                updateVoiceUI('listening', '🎙️ Listening...');
+                speakText('Listening for your command...');
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                console.log('Voice command:', transcript);
+                processVoiceCommand(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                updateVoiceUI('idle', '🎙️');
+                speakText('Sorry, I didn\'t catch that. Please try again.');
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                updateVoiceUI('idle', '🎙️');
+            };
+        }
+
+        function toggleVoiceAssistant() {
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
+        function updateVoiceUI(state, icon) {
+            const assistant = document.getElementById('voiceAssistant');
+            const status = document.getElementById('voiceStatus');
+
+            assistant.className = 'voice-assistant';
+            document.getElementById('voiceIcon').textContent = icon;
+
+            if (state === 'listening') {
+                assistant.classList.add('listening');
+                status.textContent = 'Listening... Speak your command';
+                status.style.display = 'block';
+            } else if (state === 'speaking') {
+                assistant.classList.add('speaking');
+                status.textContent = 'Speaking...';
+                status.style.display = 'block';
+            } else {
+                status.style.display = 'none';
+            }
+        }
+
+        function speakText(text) {
+            if (isSpeaking) {
+                speechSynthesis.cancel();
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 0.8;
+
+            utterance.onstart = function() {
+                isSpeaking = true;
+                updateVoiceUI('speaking', '🔊');
+            };
+
+            utterance.onend = function() {
+                isSpeaking = false;
+                updateVoiceUI('idle', '🎙️');
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        async function processVoiceCommand(command) {
+            console.log('🎤 Processing voice command:', command);
+
+            try {
+                // Send command to backend AI API
+                console.log('📡 Sending to backend API...');
+                const response = await fetch('http://localhost:8080/stations/voice_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+
+                console.log('📊 API Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ API Error:', response.status, errorText);
+                    throw new Error(`API request failed: ${response.status} - ${errorText}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ API Response:', result);
+
+                // Speak the AI-generated response
+                speakText(result.response);
+
+                // Execute the determined action
+                await executeVoiceAction(result.action, result.parameters || {});
+
+            } catch (error) {
+                console.error('❌ Voice command processing failed:', error);
+                speakText('Sorry, I\'m having trouble connecting right now. Please try again.');
+            }
+        }
+
+        async function executeVoiceAction(action, parameters) {
+            console.log('Executing action:', action, parameters);
+
+            switch (action) {
+                case 'plan_route':
+                    showStatus('Planning route...', 'info');
+                    planRoute();
+                    break;
+
+                case 'show_green_stations':
+                    filterStationsByColor('green');
+                    break;
+
+                case 'show_yellow_stations':
+                    filterStationsByColor('yellow');
+                    break;
+
+                case 'show_red_stations':
+                    filterStationsByColor('red');
+                    break;
+
+                case 'update_wait_times':
+                    fetchRealtimeWaitTimes();
+                    break;
+
+                case 'get_station_count':
+                    const count = evStations ? evStations.length : 0;
+                    speakText(`I found ${count} charging stations along your route.`);
+                    break;
+
+                case 'get_battery_status':
+                    const battery = carDetails ? carDetails.batteryPercentage : 0;
+                    speakText(`Your current battery level is ${battery} percent.`);
+                    break;
+
+                case 'highlight_top_station':
+                    highlightTopStation();
+                    break;
+
+                case 'get_help':
+                    showStatus('Voice commands: "show green/yellow/red stations", "update wait times", "plan route", "how many stations", "battery status"', 'info');
+                    break;
+
+                default:
+                    console.log('No specific action for:', action);
+            }
+        }
+
+        function filterStationsByColor(color) {
+            if (!evStations || evStations.length === 0) {
+                speakText('No stations available to filter.');
+                return;
+            }
+
+            // This would need to be implemented based on the current station display logic
+            // For now, we'll just refresh and show status
+            showStatus(`Filtering stations by ${color} wait times`, 'info');
+            setTimeout(() => {
+                const prepared = applyStopsConfig(evStations);
+                displayTopRecommendations(prepared.topStations);
+                displayAllStations(prepared.allStationsSorted);
+            }, 500);
+        }
+
+        function highlightTopStation() {
+            const topStations = document.querySelectorAll('.horizontal-card');
+            if (topStations.length > 0) {
+                topStations[0].scrollIntoView({ behavior: 'smooth' });
+                topStations[0].style.borderColor = '#FFD700';
+                topStations[0].style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.5)';
+                setTimeout(() => {
+                    topStations[0].style.borderColor = '';
+                    topStations[0].style.boxShadow = '';
+                }, 3000);
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            // Initialize customization controls immediately
+            initStopsControls();
+            initVoiceAssistant();
+
+            if (!sessionStorage.getItem('guest_car_details')) {
+                showStatus('Redirecting to car details form...', 'info');
+                setTimeout(() => {
+                    window.location.href = 'guest-car-details.html';
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>

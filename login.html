@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerGrid EV - Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5f 100%); min-height: 100vh; color: white; display: flex; align-items: center; justify-content: center; padding: 32px; }
+        .shell { width: 100%; max-width: 560px; }
+        .logo { text-align: center; font-weight: 800; color: #00d4ff; margin-bottom: 16px; font-size: 1.25rem; }
+        .subtitle { text-align: center; color: rgba(255,255,255,.8); margin-bottom: 28px; font-size: 1.05rem; }
+        .card { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); border: 1px solid rgba(0,212,255,0.25); border-radius: 24px; padding: 32px; box-shadow: 0 20px 55px rgba(0, 212, 255, 0.14); }
+        h1 { font-size: 2rem; margin-bottom: .5rem; background: linear-gradient(135deg, #00d4ff, #66e0ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
+        .field { margin-top: 18px; }
+        label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 1.05rem; }
+        input { width: 100%; padding: 1.1rem 1.1rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.32); background: rgba(20,20,28,0.85); color: #e9f4ff; font-size: 1.05rem; }
+        input:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 0 4px rgba(0,212,255,0.25); }
+        .actions { margin-top: 22px; }
+        .btn { width: 100%; padding: 1.05rem 1.1rem; border: none; border-radius: 999px; font-weight: 800; cursor: pointer; transition: transform .15s ease, box-shadow .2s ease; font-size: 1.05rem; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: white; box-shadow: 0 12px 32px rgba(0,212,255,.38); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(0,212,255,.46); }
+        .link-row { margin-top: 16px; text-align: center; color: rgba(255,255,255,.85); font-size: 1.02rem; }
+        .link-row a { color: #00d4ff; text-decoration: none; font-weight: 700; }
+        .link-row a:hover { text-decoration: underline; }
+        .error { color: #ff7070; margin-top: 12px; display: none; text-align: center; font-weight: 700; font-size: 1rem; }
+        .topbar { position: fixed; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+        .topbar a { pointer-events: all; color: rgba(255,255,255,.95); text-decoration: none; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="logo">⚡ PowerGrid EV</div>
+        <a href="welcome.html">← Back</a>
+    </div>
+
+    <div class="shell">
+        <div class="card">
+            <h1>Sign in to your account</h1>
+            <p class="subtitle">Enter your credentials to continue</p>
+            <div class="field">
+                <label for="username">Username</label>
+                <input id="username" type="text" placeholder="e.g., alexj" autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" placeholder="Enter your password" autocomplete="current-password">
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" id="signinBtn">Sign in</button>
+            </div>
+            <div class="error" id="errorMsg">Invalid username or password</div>
+            <div class="link-row">New here? <a href="register.html" id="goRegister">Create an Account</a></div>
+        </div>
+    </div>
+
+    <script>
+        const USERS_KEY = 'pg_users_v1';
+        const PROFILE_KEY = 'pg_user_profile_v1';
+
+        function loadUsers() {
+            try { return JSON.parse(localStorage.getItem(USERS_KEY) || '{}'); } catch { return {}; }
+        }
+        function saveProfile(profile) {
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+        }
+        function redirectToDashboard(name) {
+            const q = name ? `?name=${encodeURIComponent(name)}&auth=1` : `?auth=1`;
+            window.location.href = `guest-dashboard.html${q}`;
+        }
+
+        document.getElementById('signinBtn').addEventListener('click', () => {
+            const username = (document.getElementById('username').value || '').trim();
+            const password = document.getElementById('password').value || '';
+            const users = loadUsers();
+            const user = users[username];
+
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.style.display = 'none';
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please enter both username and password';
+                errorEl.style.display = 'block';
+                return;
+            }
+            if (!user || user.password !== password) {
+                errorEl.textContent = 'Invalid username or password';
+                errorEl.style.display = 'block';
+                return;
+            }
+            // Persist active profile for quick access
+            const profile = {
+                username,
+                name: user.name,
+                evBrand: user.evBrand,
+                chargerType: user.chargerType,
+                homeLocation: user.homeLocation,
+                lastLoginAt: Date.now()
+            };
+            saveProfile(profile);
+            redirectToDashboard(user.name || username);
+        });
+
+        // Autofill username if a profile exists
+        window.addEventListener('load', () => {
+            try {
+                const profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+                if (profile?.username) {
+                    document.getElementById('username').value = profile.username;
+                }
+            } catch {}
+        });
+    </script>
+</body>
+</html>

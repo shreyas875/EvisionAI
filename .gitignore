@@ -1,0 +1,9 @@
+node_modules/
+venv/
+__pycache__/
+*.db
+evisionai.db
+.env
+backend/.env
+.idea/
+.vscode/

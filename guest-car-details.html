@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Car Details - PowerGrid EV</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5f 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: linear-gradient(45deg, #34c759, #28a745);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(52, 199, 89, 0.2);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #34c759;
+        }
+
+        .logo::before {
+            content: "⚡";
+            margin-right: 0.5rem;
+            font-size: 2rem;
+            filter: drop-shadow(0 0 10px #34c759);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .form-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #34c759, #28a745, #34c759);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .form-subtitle {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .form-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            border-radius: 24px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #34c759;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-select {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-select option {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.5rem;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #34c759;
+            box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .battery-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .battery-bar {
+            flex: 1;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #dc3545, #ffc107, #28a745);
+            transition: width 0.3s ease;
+        }
+
+        .battery-text {
+            font-weight: 600;
+            color: #34c759;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #34c759, #28a745);
+            color: white;
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
+            margin-top: 1rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 199, 89, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .required {
+            color: #dc3545;
+            margin-left: 0.25rem;
+        }
+
+        .form-note {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #34c759;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-particles" id="particles"></div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">PowerGrid EV</div>
+            <a href="guest-dashboard.html" class="back-btn">← Back to Dashboard</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="form-header">
+            <h1 class="form-title">Enter Your EV Details</h1>
+            <p class="form-subtitle">Provide your electric vehicle information to get personalized charging station recommendations and optimized routes.</p>
+        </div>
+
+        <form id="carDetailsForm" class="form-card">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">EV Brand <span class="required">*</span></label>
+                    <select id="evBrand" class="form-select" required>
+                        <option value="">Select your EV brand</option>
+                        <option value="Tesla">Tesla</option>
+                        <option value="Tata">Tata</option>
+                        <option value="Mahindra">Mahindra</option>
+                        <option value="MG">MG</option>
+                        <option value="Hyundai">Hyundai</option>
+                        <option value="Kia">Kia</option>
+                        <option value="BYD">BYD</option>
+                        <option value="Audi">Audi</option>
+                        <option value="BMW">BMW</option>
+                        <option value="Mercedes">Mercedes-Benz</option>
+                        <option value="Volkswagen">Volkswagen</option>
+                        <option value="Nissan">Nissan</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model</label>
+                    <input type="text" id="evModel" class="form-input" placeholder="e.g., Model 3, Nexon EV">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Charger Type <span class="required">*</span></label>
+                    <select id="chargerType" class="form-select" required>
+                        <option value="">Select charger type</option>
+                        <option value="CCS">CCS (Combo)</option>
+                        <option value="CHAdeMO">CHAdeMO</option>
+                        <option value="Type 2">Type 2 (Mennekes)</option>
+                        <option value="Tesla SC">Tesla Supercharger</option>
+                        <option value="Tesla DC">Tesla Destination Charger</option>
+                        <option value="GB/T">GB/T (China)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Battery Capacity (kWh)</label>
+                    <input type="number" id="batteryCapacity" class="form-input" placeholder="e.g., 75" min="10" max="200">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Current Battery Percentage <span class="required">*</span></label>
+                <input type="range" id="batteryPercentage" class="form-input" min="0" max="100" value="80" oninput="updateBatteryDisplay()">
+                <div class="battery-indicator">
+                    <div class="battery-bar">
+                        <div class="battery-fill" id="batteryFill" style="width: 80%"></div>
+                    </div>
+                    <span class="battery-text" id="batteryText">80%</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Current Location <span class="required">*</span></label>
+                    <input type="text" id="currentLocation" class="form-input" placeholder="Enter your current location" required>
+                    <div class="form-note">Start typing to get location suggestions</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Destination <span class="required">*</span></label>
+                    <input type="text" id="destination" class="form-input" placeholder="Enter your destination" required>
+                    <div class="form-note">Where do you want to go?</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Preferred Charging Speed</label>
+                <select id="chargingSpeed" class="form-select">
+                    <option value="any">Any Speed</option>
+                    <option value="fast">Fast Charging (DC) - 50kW+</option>
+                    <option value="rapid">Rapid Charging - 100kW+</option>
+                    <option value="ultra">Ultra Fast - 150kW+</option>
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <span id="btnText">Find EV Stations & Plan Route</span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Create animated background particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 40;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Update battery display
+        function updateBatteryDisplay() {
+            const percentage = document.getElementById('batteryPercentage').value;
+            const fill = document.getElementById('batteryFill');
+            const text = document.getElementById('batteryText');
+
+            fill.style.width = percentage + '%';
+            text.textContent = percentage + '%';
+
+            // Change color based on battery level
+            if (percentage < 20) {
+                fill.style.background = '#dc3545'; // Red
+            } else if (percentage < 50) {
+                fill.style.background = '#ffc107'; // Yellow
+            } else {
+                fill.style.background = '#28a745'; // Green
+            }
+        }
+
+        // Form submission
+        document.getElementById('carDetailsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = {
+                evBrand: document.getElementById('evBrand').value,
+                evModel: document.getElementById('evModel').value,
+                chargerType: document.getElementById('chargerType').value,
+                batteryCapacity: document.getElementById('batteryCapacity').value,
+                batteryPercentage: document.getElementById('batteryPercentage').value,
+                currentLocation: document.getElementById('currentLocation').value,
+                destination: document.getElementById('destination').value,
+                chargingSpeed: document.getElementById('chargingSpeed').value
+            };
+
+            // Validate required fields
+            if (!formData.evBrand || !formData.chargerType || !formData.currentLocation || !formData.destination) {
+                alert('Please fill in all required fields marked with *');
+                return;
+            }
+
+            // Show loading state
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            btn.disabled = true;
+            btnText.textContent = 'Planning your route...';
+
+            // Store data in sessionStorage for the routing page
+            sessionStorage.setItem('guest_car_details', JSON.stringify(formData));
+
+            // Redirect to integrated routing page
+            setTimeout(() => {
+                window.location.href = 'guest-integrated-routing.html';
+            }, 1000);
+        });
+
+        // Initialize
+        window.addEventListener('load', () => {
+            createParticles();
+            updateBatteryDisplay();
+        });
+    </script>
+</body>
+</html>

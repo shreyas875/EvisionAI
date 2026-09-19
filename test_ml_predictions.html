@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVisionAI ML Waiting Time Predictions - Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .station-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        .wait-time {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .wait-time.green {
+            color: #28a745;
+        }
+        .wait-time.yellow {
+            color: #ffc107;
+        }
+        .wait-time.red {
+            color: #dc3545;
+        }
+        .station-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .info-item {
+            font-size: 14px;
+            color: #666;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ EVisionAI ML Waiting Time Predictions</h1>
+            <p>Advanced ML-based EV charging station wait time predictions</p>
+        </div>
+
+        <div class="controls">
+            <h3>Prediction Parameters</h3>
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" value="19.0760,72.8777" placeholder="lat,lon or address">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label for="weather">Weather Condition:</label>
+                    <select id="weather">
+                        <option value="sunny">Sunny</option>
+                        <option value="cloudy">Cloudy</option>
+                        <option value="rainy">Rainy</option>
+                        <option value="snowy">Snowy</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="weatherSeverity">Weather Severity (0-1):</label>
+                    <input type="number" id="weatherSeverity" value="0.5" min="0" max="1" step="0.1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="trafficLevel">Traffic Level (0-1):</label>
+                    <input type="number" id="trafficLevel" value="0.5" min="0" max="1" step="0.1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="isHoliday">Is Holiday:</label>
+                    <select id="isHoliday">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="getPredictions()">Get ML Predictions</button>
+            <button onclick="trainModel()">Train Model</button>
+            <button onclick="getStationPrediction()">Test Single Station</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script src="chargingAvailability.js"></script>
+    <script>
+        const apiBaseUrl = 'http://localhost:8000';
+        const chargingAPI = new EVisionAIChargingAvailability(apiBaseUrl);
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showLoading(message = 'Loading...') {
+            showStatus(message, 'loading');
+        }
+
+        async function getPredictions() {
+            showLoading('Getting ML predictions...');
+            
+            try {
+                const options = {
+                    location: document.getElementById('location').value,
+                    weather_condition: document.getElementById('weather').value,
+                    weather_severity: parseFloat(document.getElementById('weatherSeverity').value),
+                    traffic_level: parseFloat(document.getElementById('trafficLevel').value),
+                    is_holiday: document.getElementById('isHoliday').value === 'true'
+                };
+
+                const predictions = await chargingAPI.getMLPredictions(options);
+                displayPredictions(predictions);
+                showStatus('Predictions loaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error getting predictions:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getStationPrediction() {
+            showLoading('Getting single station prediction...');
+            
+            try {
+                const options = {
+                    station_id: 1, // Test with station ID 1
+                    weather_condition: document.getElementById('weather').value,
+                    weather_severity: parseFloat(document.getElementById('weatherSeverity').value),
+                    traffic_level: parseFloat(document.getElementById('trafficLevel').value),
+                    is_holiday: document.getElementById('isHoliday').value === 'true'
+                };
+
+                const prediction = await chargingAPI.getStationPrediction(options);
+                displaySinglePrediction(prediction);
+                showStatus('Single station prediction loaded!', 'success');
+                
+            } catch (error) {
+                console.error('Error getting station prediction:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function trainModel() {
+            showLoading('Training ML model... This may take a few minutes.');
+            
+            try {
+                const results = await chargingAPI.trainModel();
+                showStatus(`Model training completed! MAE: ${results.results.mae.toFixed(2)} min, R²: ${results.results.r2.toFixed(3)}`, 'success');
+                
+                // Display feature importance
+                if (results.results.feature_importance) {
+                    const importanceDiv = document.createElement('div');
+                    importanceDiv.innerHTML = '<h4>Top Feature Importance:</h4>';
+                    const sortedFeatures = Object.entries(results.results.feature_importance)
+                        .sort(([,a], [,b]) => b - a)
+                        .slice(0, 5);
+                    
+                    sortedFeatures.forEach(([feature, importance]) => {
+                        importanceDiv.innerHTML += `<p>${feature}: ${importance.toFixed(3)}</p>`;
+                    });
+                    
+                    document.getElementById('results').appendChild(importanceDiv);
+                }
+                
+            } catch (error) {
+                console.error('Error training model:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function displayPredictions(predictions) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (!predictions.results || predictions.results.length === 0) {
+                resultsDiv.innerHTML = '<p>No predictions available.</p>';
+                return;
+            }
+
+            const header = document.createElement('h3');
+            header.textContent = `ML Predictions (${predictions.results.length} stations)`;
+            resultsDiv.appendChild(header);
+
+            predictions.results.forEach(station => {
+                const card = document.createElement('div');
+                card.className = 'station-card';
+                
+                const waitDisplay = chargingAPI.getWaitTimeDisplay(station.predicted_wait_time_minutes);
+                
+                card.innerHTML = `
+                    <h4>${station.station_name}</h4>
+                    <div class="wait-time ${waitDisplay.category}">
+                        ${waitDisplay.text} (${waitDisplay.description})
+                    </div>
+                    <div class="station-info">
+                        <div class="info-item"><strong>Distance:</strong> ${station.distance_km} km</div>
+                        <div class="info-item"><strong>Chargers:</strong> ${station.charger_types}</div>
+                        <div class="info-item"><strong>Ports:</strong> ${station.num_ports}</div>
+                        <div class="info-item"><strong>Confidence:</strong> ${(station.confidence * 100).toFixed(1)}%</div>
+                    </div>
+                `;
+                
+                resultsDiv.appendChild(card);
+            });
+        }
+
+        function displaySinglePrediction(prediction) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            const header = document.createElement('h3');
+            header.textContent = 'Single Station Prediction';
+            resultsDiv.appendChild(header);
+
+            const card = document.createElement('div');
+            card.className = 'station-card';
+            
+            const waitDisplay = chargingAPI.getWaitTimeDisplay(prediction.predicted_wait_time_minutes);
+            
+            card.innerHTML = `
+                <h4>${prediction.station_name}</h4>
+                <div class="wait-time ${waitDisplay.category}">
+                    ${waitDisplay.text} (${waitDisplay.description})
+                </div>
+                <div class="station-info">
+                    <div class="info-item"><strong>Confidence:</strong> ${(prediction.confidence * 100).toFixed(1)}%</div>
+                    <div class="info-item"><strong>Category:</strong> ${prediction.wait_time_category}</div>
+                </div>
+                <h5>Top Feature Importance:</h5>
+                <ul>
+                    ${prediction.top_feature_importance.map(f => 
+                        `<li>${f.feature}: ${f.importance}</li>`
+                    ).join('')}
+                </ul>
+            `;
+            
+            resultsDiv.appendChild(card);
+        }
+
+        // Initialize with default predictions
+        window.onload = function() {
+            showStatus('Ready to make predictions! Click "Get ML Predictions" to start.', 'success');
+        };
+    </script>
+</body>
+</html>
